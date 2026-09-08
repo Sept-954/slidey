@@ -1103,7 +1103,6 @@ function startPieceDrag(piece, x, y, allowVertical) {
     startCol: piece.col,
     startX: x,
     startY: y,
-    movedAny: false,
     pointerId: 0
   };
   const el = boardEl.querySelector(`.piece[data-id="${piece.id}"]`);
@@ -1267,9 +1266,6 @@ function pointerMoveHandler(event) {
     return;
   }
 
-  if (targetRow !== pointer.startRow || targetCol !== pointer.startCol) {
-    pointer.movedAny = true;
-  }
   piece.row = targetRow;
   piece.col = targetCol;
   const el = boardEl.querySelector(`.piece[data-id="${piece.id}"]`);
@@ -1307,7 +1303,7 @@ async function finishMovePointer() {
   if (!piece) return;
   boardEl.querySelectorAll(".piece.dragging").forEach((el) => el.classList.remove("dragging"));
   const moved = piece.row !== drag.startRow || piece.col !== drag.startCol;
-  const acted = moved || drag.movedAny;
+  const acted = moved;
 
   if (drag.kind === "piece-move") {
     if (!acted) {
