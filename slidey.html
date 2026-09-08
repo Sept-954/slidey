@@ -1,0 +1,1429 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#f4fbf8">
+  <title>Slidey</title>
+  <style>
+:root {
+  --ink: #2d5555;
+  --ink-soft: #6c8b8a;
+  --paper: #f4fbf8;
+  --board-bg: #f1f8f6;
+  --line: #d8e8e4;
+  --gap: 3px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(158, 220, 208, 0.18), transparent 42%),
+    linear-gradient(315deg, rgba(133, 185, 231, 0.16), transparent 46%),
+    var(--paper);
+  color: var(--ink);
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Hiragino Sans GB", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.top {
+  height: auto;
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: max(12px, env(safe-area-inset-top)) 20px 6px;
+}
+
+.title-block {
+  min-width: 0;
+}
+
+h1 {
+  font-size: 31px;
+  font-weight: 800;
+  line-height: 1;
+  color: #275456;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.tagline {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.score-block {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 7px 9px 7px 11px;
+  border: 1px solid #d9ebe7;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 5px 16px rgba(78, 121, 115, 0.08);
+}
+
+.score-caption {
+  font-size: 12px;
+  color: var(--ink-soft);
+  letter-spacing: 0;
+}
+
+.score-value {
+  min-width: 28px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #245d5b;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.icon-button,
+.end-replay {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: #e3f3ef;
+  color: #2d7b72;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.icon-button:hover,
+.end-replay:hover {
+  background: #d5ede7;
+  transform: translateY(-1px);
+}
+
+.icon-button svg,
+.end-replay svg {
+  width: 18px;
+  height: 18px;
+}
+
+.game-area {
+  position: relative;
+  min-height: 0;
+  height: calc(100% - 88px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 2px 12px max(10px, env(safe-area-inset-bottom));
+}
+
+.board-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.board {
+  position: relative;
+  background: var(--board-bg);
+  border-radius: 8px;
+  box-shadow:
+    0 10px 28px rgba(83, 126, 120, 0.14),
+    inset 0 0 0 1px rgba(170, 203, 197, 0.55);
+}
+
+.cell-bg {
+  position: absolute;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(205, 222, 218, 0.75);
+  pointer-events: none;
+}
+
+.piece {
+  position: absolute;
+  z-index: 2;
+  cursor: grab;
+  touch-action: none;
+  transition: box-shadow 100ms ease, opacity 90ms ease;
+}
+
+.piece.dragging {
+  z-index: 12;
+  cursor: grabbing;
+  box-shadow:
+    0 8px 18px rgba(60, 88, 82, 0.26),
+    inset 0 0 0 1px rgba(39, 62, 60, 0.2),
+    inset 0 -3px 0 rgba(255, 255, 255, 0.24);
+}
+
+.piece.leaving {
+  opacity: 0;
+  transform: scale(0.78);
+  z-index: 3;
+}
+
+.piece.target-same,
+.piece.target-row,
+.piece.target-single {
+  z-index: 6;
+  box-shadow:
+    0 0 0 3px #ffffff,
+    0 0 0 7px rgba(242, 92, 108, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.piece.target-row {
+  box-shadow:
+    0 0 0 3px #ffffff,
+    0 0 0 7px rgba(79, 160, 222, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.piece.target-single {
+  box-shadow:
+    0 0 0 3px #ffffff,
+    0 0 0 7px rgba(161, 124, 220, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.piece-gift {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 2px rgba(50, 70, 67, 0.2);
+  color: #5b706f;
+  pointer-events: none;
+}
+
+.piece-gift svg {
+  width: 60%;
+  height: 60%;
+}
+
+.clear-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 8;
+  border-radius: 3px;
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.98) 20%, rgba(255, 255, 255, 0.98) 80%, transparent),
+    rgba(255, 255, 255, 0.72);
+  pointer-events: none;
+  animation: row-sweep 170ms ease-out forwards;
+}
+
+@keyframes row-sweep {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.82);
+  }
+  38% {
+    opacity: 1;
+    transform: scaleX(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.12);
+  }
+}
+
+.preview {
+  position: relative;
+  height: 13px;
+  margin-top: 7px;
+  pointer-events: none;
+}
+
+.preview-piece {
+  position: absolute;
+  top: 2px;
+  height: 9px;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 0 1px rgba(60, 85, 82, 0.16),
+    inset 0 -2px 0 rgba(255, 255, 255, 0.3);
+}
+
+.inventory {
+  width: 92px;
+  flex: 0 0 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 9px;
+}
+
+.item-slot {
+  position: relative;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 4px;
+  border: 1px solid #dceae6;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 6px 16px rgba(76, 117, 111, 0.09);
+  cursor: grab;
+  touch-action: none;
+  transition: opacity 130ms ease, box-shadow 130ms ease, transform 130ms ease;
+}
+
+.item-slot[data-count="0"] {
+  opacity: 0.44;
+  cursor: default;
+}
+
+.item-slot:not([data-count="0"]):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 9px 20px rgba(76, 117, 111, 0.15);
+}
+
+.item-slot.armed {
+  border-color: rgba(67, 167, 143, 0.85);
+  box-shadow: 0 0 0 3px rgba(109, 196, 174, 0.28), 0 8px 18px rgba(76, 117, 111, 0.14);
+  animation: slot-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes slot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgba(109, 196, 174, 0.2), 0 8px 18px rgba(76, 117, 111, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(109, 196, 174, 0.32), 0 8px 18px rgba(76, 117, 111, 0.16);
+  }
+}
+
+.item-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+}
+
+.item-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.item-name {
+  max-width: 100%;
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: center;
+  color: #4b6867;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.count-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 17px;
+  height: 17px;
+  display: none;
+  place-items: center;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #3b7b72;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.item-slot[data-count="1"] .count-badge,
+.item-slot[data-count="2"] .count-badge {
+  display: grid;
+}
+
+.drag-ghost {
+  position: fixed;
+  z-index: 60;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid rgba(90, 115, 112, 0.18);
+  box-shadow: 0 10px 22px rgba(63, 96, 90, 0.24);
+  pointer-events: none;
+  touch-action: none;
+}
+
+.drag-ghost svg {
+  width: 24px;
+  height: 24px;
+}
+
+.end-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(235, 248, 244, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.end-layer.show {
+  display: flex;
+}
+
+.end-replay {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #2d7b72;
+  box-shadow: 0 12px 28px rgba(66, 111, 104, 0.24);
+}
+
+.end-replay svg {
+  width: 28px;
+  height: 28px;
+}
+
+.board.over {
+  filter: saturate(0.55) brightness(0.98);
+}
+
+@media (max-width: 390px) {
+  .top {
+    min-height: 76px;
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+
+  h1 {
+    font-size: 27px;
+  }
+
+  .tagline {
+    font-size: 11.5px;
+    margin-top: 4px;
+  }
+
+  .game-area {
+    height: calc(100% - 76px);
+    gap: 7px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .inventory {
+    width: 82px;
+    flex-basis: 82px;
+    gap: 7px;
+  }
+
+  .item-slot {
+    min-height: 84px;
+    gap: 4px;
+    padding: 7px 3px;
+  }
+
+  .item-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .item-name {
+    font-size: 9px;
+  }
+
+  .score-block {
+    padding: 6px 7px 6px 9px;
+  }
+
+  .score-value {
+    font-size: 16px;
+  }
+}
+
+@media (max-height: 620px) {
+  .top {
+    min-height: 72px;
+  }
+
+  .game-area {
+    height: calc(100% - 72px);
+  }
+
+  .item-slot {
+    min-height: 74px;
+  }
+
+  .item-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .preview {
+    height: 11px;
+    margin-top: 5px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="title-block">
+      <h1>Slidey</h1>
+      <p class="tagline">拖动方块，填满一行即可消除</p>
+    </div>
+    <div class="score-block">
+      <span class="score-caption">分数</span>
+      <strong id="score" class="score-value">0</strong>
+      <button id="replay" class="icon-button" aria-label="重新开始" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"></path>
+          <path d="M3 3v5h5"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="game-area" class="game-area">
+    <section id="board-column" class="board-column" aria-label="游戏棋盘">
+      <div id="board" class="board"></div>
+      <div id="preview" class="preview" aria-hidden="true"></div>
+    </section>
+    <aside id="inventory" class="inventory" aria-label="道具"></aside>
+
+    <div id="end-layer" class="end-layer">
+      <button id="end-replay" class="end-replay" aria-label="重新开始" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"></path>
+          <path d="M3 3v5h5"></path>
+        </svg>
+      </button>
+    </div>
+  </main>
+
+  <script>
+"use strict";
+
+const ROWS = 9;
+const COLS = 9;
+const ITEM_MAX = 2;
+const TOOL_NAMES = {
+  same: "同色消除",
+  row: "整行消除",
+  move: "单块移动",
+  single: "单块消除"
+};
+
+const TOOL_COLORS = {
+  same: { base: "#f07f94", tint: "#fde9ee", dark: "#c85d75" },
+  row: { base: "#5c9bd8", tint: "#e5f0fb", dark: "#3776ad" },
+  move: { base: "#4db394", tint: "#e0f4ee", dark: "#248a70" },
+  single: { base: "#9d7bd8", tint: "#f0eafa", dark: "#7854b5" }
+};
+
+const BLOCK_COLORS = [
+  { id: "berry", main: "#efa9a3", edge: "#d98683", pale: "#ffe1dd" },
+  { id: "sky", main: "#9cc4e8", edge: "#7ea6cc", pale: "#e5f1fb" },
+  { id: "mint", main: "#8fd0bc", edge: "#6bb39f", pale: "#e5f7f1" },
+  { id: "lemon", main: "#edcf80", edge: "#d2ae5c", pale: "#fdf2d7" },
+  { id: "lilac", main: "#b8a4e4", edge: "#9b86ca", pale: "#f0ebfb" }
+];
+
+const COLOR_MAP = Object.fromEntries(BLOCK_COLORS.map((c) => [c.id, c]));
+
+const ITEM_SVG = {
+  same:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M7 4h5v5H7zM16 4h3v3h-3zM4 13h3v3H4zM16 13h3v3h-3z" fill="currentColor" stroke="none"/>' +
+    '<path d="M4 7h2M7 19h2M19 10v4" />' +
+    "</svg>",
+  row:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M4 7h16M4 13h16" opacity=".38"/>' +
+    '<rect x="3.5" y="16.5" width="17" height="4" rx="1.6" fill="currentColor" stroke="none"/>' +
+    "</svg>",
+  move:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M12 3v18M3 12h18M6 6l6 6 6-6M6 18l6-6 6 6" opacity=".42"/>' +
+    '<path d="M12 5l-2-2h4zM12 19l-2 2h4zM5 12l-2-2v4zM19 12l2-2v4z" fill="currentColor" stroke="none"/>' +
+    "</svg>",
+  single:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="4" y="4" width="16" height="16" rx="3.2"/>' +
+    '<path d="M9 9l6 6M15 9l-6 6"/>' +
+    "</svg>"
+};
+
+let uid = 1;
+let boardGap = 3;
+let state = null;
+let busy = false;
+let moveArmed = false;
+let pointer = null;
+let ghostEl = null;
+let layoutFrame = 0;
+
+const boardEl = document.getElementById("board");
+const boardColumnEl = document.getElementById("board-column");
+const previewEl = document.getElementById("preview");
+const inventoryEl = document.getElementById("inventory");
+const scoreEl = document.getElementById("score");
+const endLayerEl = document.getElementById("end-layer");
+const replayButton = document.getElementById("replay");
+const endReplayButton = document.getElementById("end-replay");
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function weightedPick() {
+  const r = Math.random();
+  if (r < 0.14) return 1;
+  if (r < 0.44) return 2;
+  if (r < 0.72) return 3;
+  return 4;
+}
+
+function pickBlockColor() {
+  return BLOCK_COLORS[randInt(0, BLOCK_COLORS.length - 1)].id;
+}
+
+function randomToolKey() {
+  const keys = Object.keys(TOOL_NAMES);
+  return keys[randInt(0, keys.length - 1)];
+}
+
+function maybeItem() {
+  return Math.random() < 0.12 ? randomToolKey() : null;
+}
+
+function randomRowTemplate() {
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const segments = [];
+    let pos = 0;
+    let hasEmpty = false;
+
+    while (pos < COLS) {
+      const remaining = COLS - pos;
+      const rollGap =
+        remaining === 1 ||
+        Math.random() < (hasEmpty ? 0.38 : 0.16);
+
+      if (rollGap) {
+        hasEmpty = true;
+        pos += 1;
+        if (pos < COLS && Math.random() < 0.13) pos += 1;
+        continue;
+      }
+
+      let len = Math.min(weightedPick(), remaining);
+      if (!hasEmpty && pos + len >= COLS && remaining > 1) {
+        len = Math.max(1, remaining - 1);
+      }
+
+      const segment = {
+        col: pos,
+        len,
+        color: pickBlockColor(),
+        item: maybeItem()
+      };
+      segments.push(segment);
+      pos += len;
+    }
+
+    if (!hasEmpty) continue;
+    const occupied = segments.reduce((sum, s) => sum + s.len, 0);
+    if (occupied >= COLS) continue;
+    if (segments.length >= 1 && occupied >= 3) return segments;
+  }
+  return [{ col: 0, len: 4, color: pickBlockColor(), item: null }];
+}
+
+function randomSupportedTemplate(support) {
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const segments = [];
+    let pos = 0;
+    let hasEmpty = false;
+
+    while (pos < COLS) {
+      let runEnd = pos;
+      while (runEnd < COLS && support[runEnd]) runEnd += 1;
+      const run = runEnd - pos;
+
+      if (run === 0) {
+        hasEmpty = true;
+        pos += 1;
+        continue;
+      }
+
+      const remaining = COLS - pos;
+      const rollGap =
+        remaining === 1 ||
+        Math.random() < (hasEmpty ? 0.42 : 0.2);
+
+      if (rollGap) {
+        hasEmpty = true;
+        pos += 1;
+        continue;
+      }
+
+      let len = Math.min(weightedPick(), run);
+      if (!hasEmpty && pos + len >= COLS && remaining > 1) {
+        len = Math.max(1, remaining - 1);
+      }
+      len = Math.min(len, run);
+
+      segments.push({
+        col: pos,
+        len,
+        color: pickBlockColor(),
+        item: maybeItem()
+      });
+      pos += len;
+    }
+
+    if (!hasEmpty) continue;
+    if (segments.length < 2) continue;
+    return segments;
+  }
+
+  const fallback = [];
+  support.forEach((on, col) => {
+    if (on && col % 2 === 0) fallback.push({ col, len: 1, color: pickBlockColor(), item: null });
+  });
+  return fallback;
+}
+
+function makePiece(row, segment) {
+  return {
+    id: uid++,
+    row,
+    col: segment.col,
+    len: segment.len,
+    color: segment.color,
+    item: segment.item || null
+  };
+}
+
+function makeStartPieces() {
+  const bottom = randomRowTemplate();
+  const support = Array(COLS).fill(false);
+  const pieces = bottom.map((seg) => {
+    const piece = makePiece(ROWS - 1, seg);
+    for (let c = seg.col; c < seg.col + seg.len; c += 1) support[c] = true;
+    return piece;
+  });
+  randomSupportedTemplate(support).forEach((seg) => {
+    pieces.push(makePiece(ROWS - 2, seg));
+  });
+  return pieces;
+}
+
+function createEmptyInventory() {
+  return {
+    same: 0,
+    row: 0,
+    move: 0,
+    single: 0
+  };
+}
+
+function resetGame() {
+  uid = 1;
+  busy = false;
+  moveArmed = false;
+  pointer = null;
+  state = {
+    pieces: makeStartPieces(),
+    inventory: createEmptyInventory(),
+    nextRow: randomRowTemplate(),
+    score: 0,
+    round: 0,
+    over: false
+  };
+  scoreEl.textContent = "0";
+  endLayerEl.classList.remove("show");
+  boardEl.classList.remove("over");
+  renderInventory();
+  renderPreview();
+  renderBoard();
+}
+
+function occupiedAt(row, col, ignoreId) {
+  return state.pieces.some(
+    (p) =>
+      p.id !== ignoreId &&
+      p.row === row &&
+      col >= p.col &&
+      col < p.col + p.len
+  );
+}
+
+function canPlace(row, col, len, ignoreId) {
+  if (row < 0 || row >= ROWS || col < 0 || col + len > COLS) return false;
+  for (let c = col; c < col + len; c += 1) {
+    if (occupiedAt(row, c, ignoreId)) return false;
+  }
+  return true;
+}
+
+function settlePieces() {
+  let moved = true;
+  let guard = 0;
+
+  while (moved && guard < 60) {
+    moved = false;
+    guard += 1;
+    const sorted = [...state.pieces].sort((a, b) => a.row - b.row);
+    for (const piece of sorted) {
+      if (!state.pieces.includes(piece)) continue;
+      let canStillFall =
+        piece.row < ROWS - 1 &&
+        canPlace(piece.row + 1, piece.col, piece.len, piece.id);
+      while (canStillFall) {
+        piece.row += 1;
+        moved = true;
+        canStillFall =
+          piece.row < ROWS - 1 &&
+          canPlace(piece.row + 1, piece.col, piece.len, piece.id);
+      }
+    }
+  }
+}
+
+function fullRows() {
+  const rows = [];
+  for (let row = 0; row < ROWS; row += 1) {
+    let complete = true;
+    for (let col = 0; col < COLS; col += 1) {
+      if (!occupiedAt(row, col, null)) {
+        complete = false;
+        break;
+      }
+    }
+    if (complete) rows.push(row);
+  }
+  return rows;
+}
+
+function addInventory(type) {
+  if (!type || state.inventory[type] >= ITEM_MAX) return false;
+  state.inventory[type] += 1;
+  renderInventory();
+  return true;
+}
+
+function useInventory(type) {
+  if (!state.inventory[type]) return false;
+  state.inventory[type] -= 1;
+  if (type === "move" && state.inventory.move === 0) moveArmed = false;
+  renderInventory();
+  return true;
+}
+
+function randomAutoReward() {
+  const open = Object.keys(state.inventory).filter(
+    (key) => state.inventory[key] < ITEM_MAX
+  );
+  if (!open.length) return;
+  const type = open[randInt(0, open.length - 1)];
+  addInventory(type);
+}
+
+function addScore(rowsCleared) {
+  if (rowsCleared <= 0) return;
+  const points = 50 * rowsCleared * (rowsCleared + 1);
+  state.score += points;
+  scoreEl.textContent = String(state.score);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function boardGeometry() {
+  const width = boardEl.clientWidth || 200;
+  const gap = boardGap;
+  const step = (width + gap) / ROWS;
+  return { width, gap, step };
+}
+
+function renderInventory() {
+  inventoryEl.innerHTML = "";
+  Object.keys(TOOL_NAMES).forEach((type) => {
+    const slot = document.createElement("div");
+    const info = TOOL_COLORS[type];
+    const count = state.inventory[type];
+    slot.className = "item-slot";
+    slot.dataset.type = type;
+    slot.dataset.count = String(count);
+    slot.setAttribute("role", "button");
+    slot.setAttribute("tabindex", count > 0 ? "0" : "-1");
+    slot.style.setProperty("--item-base", info.base);
+    slot.style.setProperty("--item-tint", info.tint);
+    slot.innerHTML =
+      '<div class="item-icon"></div>' +
+      '<div class="item-name"></div>' +
+      '<div class="count-badge"></div>';
+    const iconBox = slot.querySelector(".item-icon");
+    iconBox.innerHTML = ITEM_SVG[type];
+    iconBox.style.background = info.tint;
+    iconBox.style.color = info.dark;
+    slot.querySelector(".item-name").textContent = TOOL_NAMES[type];
+    slot.querySelector(".count-badge").textContent = String(count);
+    inventoryEl.appendChild(slot);
+  });
+  syncMoveArming();
+}
+
+function syncMoveArming() {
+  inventoryEl.querySelectorAll(".item-slot").forEach((slot) => {
+    const type = slot.dataset.type;
+    slot.classList.toggle("armed", type === "move" && moveArmed && state.inventory.move > 0);
+  });
+}
+
+function setSlotData(slot) {
+  const type = slot.dataset.type;
+  const count = state.inventory[type];
+  slot.dataset.count = String(count);
+  slot.setAttribute("tabindex", count > 0 ? "0" : "-1");
+  slot.querySelector(".count-badge").textContent = String(count);
+}
+
+function renderBoard() {
+  boardEl.innerHTML = "";
+  const { gap, step } = boardGeometry();
+
+  for (let row = 0; row < ROWS; row += 1) {
+    for (let col = 0; col < COLS; col += 1) {
+      const cell = document.createElement("div");
+      cell.className = "cell-bg";
+      cell.style.left = `${col * step}px`;
+      cell.style.top = `${row * step}px`;
+      cell.style.width = `${step - gap}px`;
+      cell.style.height = `${step - gap}px`;
+      boardEl.appendChild(cell);
+    }
+  }
+
+  [...state.pieces]
+    .sort((a, b) => a.row - b.row || a.col - b.col)
+    .forEach((piece) => {
+      const el = document.createElement("div");
+      el.className = "piece";
+      el.dataset.id = String(piece.id);
+      el.dataset.color = piece.color;
+      positionPieceElement(el, piece.row, piece.col, piece.len);
+      const color = COLOR_MAP[piece.color];
+      el.style.background = color.main;
+      el.style.setProperty("--piece-edge", color.edge);
+      el.style.borderRadius = `${Math.max(2, Math.round(step * 0.18))}px`;
+      if (piece.item) {
+        const gift = document.createElement("span");
+        gift.className = "piece-gift";
+        gift.innerHTML = ITEM_SVG[piece.item];
+        const side = Math.max(8, Math.min(19, step * 0.46));
+        gift.style.width = `${side}px`;
+        gift.style.height = `${side}px`;
+        const tool = TOOL_COLORS[piece.item];
+        gift.style.color = tool.dark;
+        el.appendChild(gift);
+      }
+      boardEl.appendChild(el);
+    });
+
+  boardEl.classList.toggle("over", Boolean(state.over));
+}
+
+function positionPieceElement(el, row, col, len) {
+  const { gap, step } = boardGeometry();
+  el.style.left = `${col * step}px`;
+  el.style.top = `${row * step}px`;
+  el.style.width = `${len * step - gap}px`;
+  el.style.height = `${step - gap}px`;
+}
+
+function renderPreview() {
+  previewEl.innerHTML = "";
+  if (!state || !state.nextRow) return;
+  const { gap, step } = boardGeometry();
+  state.nextRow.forEach((seg) => {
+    const el = document.createElement("div");
+    el.className = "preview-piece";
+    el.style.left = `${seg.col * step}px`;
+    el.style.width = `${seg.len * step - gap}px`;
+    el.style.background = COLOR_MAP[seg.color].main;
+    previewEl.appendChild(el);
+  });
+}
+
+function spawnNextWave() {
+  if (state.pieces.some((p) => p.row === 0)) {
+    setGameOver();
+    return false;
+  }
+
+  state.pieces.forEach((piece) => {
+    piece.row -= 1;
+  });
+
+  state.nextRow.forEach((seg) => {
+    state.pieces.push(makePiece(ROWS - 1, seg));
+  });
+  state.round += 1;
+  state.nextRow = randomRowTemplate();
+  renderPreview();
+  return true;
+}
+
+async function animateRowRemoval(ids, rows) {
+  const { gap, step } = boardGeometry();
+
+  boardEl.querySelectorAll(".piece").forEach((el) => {
+    if (ids.has(Number(el.dataset.id))) el.classList.add("leaving");
+  });
+
+  rows.forEach((row) => {
+    const flash = document.createElement("div");
+    flash.className = "clear-row";
+    flash.style.top = `${row * step}px`;
+    flash.style.height = `${step - gap}px`;
+    boardEl.appendChild(flash);
+  });
+
+  await sleep(130);
+}
+
+function removePieces(ids) {
+  const removed = state.pieces.filter((p) => ids.has(p.id));
+  state.pieces = state.pieces.filter((p) => !ids.has(p.id));
+  removed.forEach((piece) => {
+    if (piece.item) addInventory(piece.item);
+  });
+}
+
+async function settleAndClearStage() {
+  let guard = 0;
+  while (guard < 20) {
+    guard += 1;
+    settlePieces();
+    renderBoard();
+
+    const rows = fullRows();
+    if (!rows.length) return;
+
+    const removeSet = new Set();
+    state.pieces.forEach((piece) => {
+      if (rows.includes(piece.row)) removeSet.add(piece.id);
+    });
+    await animateRowRemoval(removeSet, rows);
+    removePieces(removeSet);
+    addScore(rows.length);
+    renderBoard();
+  }
+}
+
+function setGameOver() {
+  if (!state) return;
+  state.over = true;
+  moveArmed = false;
+  syncMoveArming();
+  boardEl.classList.add("over");
+  endLayerEl.classList.add("show");
+  busy = false;
+  pointer = null;
+  removeGhost();
+  clearTargets();
+  renderBoard();
+}
+
+function checkTopRow() {
+  if (!state.over && state.pieces.some((p) => p.row === 0)) {
+    setGameOver();
+    return true;
+  }
+  return false;
+}
+
+function findPieceById(id) {
+  return state.pieces.find((p) => p.id === id) || null;
+}
+
+function pieceFromPointer(clientX, clientY) {
+  const hit = document.elementFromPoint(clientX, clientY);
+  const element = hit && hit.closest ? hit.closest(".piece") : null;
+  if (!element) return null;
+  return findPieceById(Number(element.dataset.id));
+}
+
+function startPieceDrag(piece, x, y, allowVertical) {
+  pointer = {
+    kind: allowVertical ? "piece-move" : "piece",
+    id: piece.id,
+    startRow: piece.row,
+    startCol: piece.col,
+    startX: x,
+    startY: y,
+    movedAny: false,
+    pointerId: 0
+  };
+  const el = boardEl.querySelector(`.piece[data-id="${piece.id}"]`);
+  if (el) el.classList.add("dragging");
+}
+
+function clearTargets() {
+  boardEl.querySelectorAll(".target-same, .target-row, .target-single").forEach((el) => {
+    el.classList.remove("target-same", "target-row", "target-single");
+  });
+}
+
+function createGhost(type) {
+  removeGhost();
+  ghostEl = document.createElement("div");
+  ghostEl.className = "drag-ghost";
+  const info = TOOL_COLORS[type];
+  ghostEl.style.background = info.tint;
+  ghostEl.style.color = info.dark;
+  ghostEl.innerHTML = ITEM_SVG[type];
+  document.body.appendChild(ghostEl);
+}
+
+function removeGhost() {
+  if (ghostEl) {
+    ghostEl.remove();
+    ghostEl = null;
+  }
+}
+
+function layoutBoard() {
+  const headerHeight = Math.max(72, document.querySelector(".top").offsetHeight);
+  const padding = 24;
+  const inventoryWidth = window.innerWidth <= 390 ? 82 : 92;
+  const gapTotal = 19;
+  const availableWidth = window.innerWidth - inventoryWidth - gapTotal - padding;
+  const availableHeight = window.innerHeight - headerHeight - 38;
+  const size = Math.floor(Math.min(560, availableWidth, availableHeight));
+  boardColumnEl.style.width = `${size}px`;
+  boardEl.style.width = `${size}px`;
+  boardEl.style.height = `${size}px`;
+  boardGap = Math.min(4, Math.max(1.6, Math.round(size * 0.014)));
+  boardEl.style.setProperty("--gap", `${boardGap}px`);
+}
+
+function requestLayout() {
+  cancelAnimationFrame(layoutFrame);
+  layoutFrame = requestAnimationFrame(() => {
+    layoutBoard();
+    renderBoard();
+    renderPreview();
+  });
+}
+
+function pointerDownHandler(event) {
+  if (event.button !== undefined && event.button !== 0) return;
+  if (busy || !state || state.over) return;
+
+  const slot = event.target.closest ? event.target.closest(".item-slot") : null;
+  if (slot) {
+    event.preventDefault();
+    const type = slot.dataset.type;
+    if (!state.inventory[type]) return;
+    if (type === "move") {
+      moveArmed = !moveArmed;
+      syncMoveArming();
+      return;
+    }
+    clearTargets();
+    moveArmed = false;
+    syncMoveArming();
+    pointer = {
+      kind: "item",
+      type,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false
+    };
+    createGhost(type);
+    return;
+  }
+
+  const pieceElement = event.target.closest ? event.target.closest(".piece") : null;
+  if (!pieceElement) return;
+  event.preventDefault();
+  const piece = findPieceById(Number(pieceElement.dataset.id));
+  if (!piece) return;
+
+  if (moveArmed && state.inventory.move > 0) {
+    startPieceDrag(piece, event.clientX, event.clientY, true);
+  } else {
+    startPieceDrag(piece, event.clientX, event.clientY, false);
+  }
+}
+
+function pointerMoveHandler(event) {
+  if (!pointer) return;
+  event.preventDefault();
+  const { gap, step } = boardGeometry();
+
+  if (pointer.kind === "item") {
+    const dx = event.clientX - pointer.startX;
+    const dy = event.clientY - pointer.startY;
+    if (!pointer.moved && Math.hypot(dx, dy) > 4) pointer.moved = true;
+    if (ghostEl) {
+      ghostEl.style.transform = `translate3d(${event.clientX - 24}px, ${event.clientY - 24}px, 0)`;
+    }
+    const hit = pieceFromPointer(event.clientX, event.clientY);
+    clearTargets();
+    if (!hit || !state.pieces.some((p) => p.id === hit.id)) return;
+    if (pointer.type === "same") {
+      boardEl.querySelectorAll(`.piece[data-color="${hit.color}"]`).forEach((el) => {
+        el.classList.add("target-same");
+      });
+    } else if (pointer.type === "row") {
+      boardEl.querySelectorAll(`.piece[data-row]`).forEach(() => {});
+      boardEl.querySelectorAll(".piece").forEach((el) => {
+        const p = findPieceById(Number(el.dataset.id));
+        if (p && p.row === hit.row) el.classList.add("target-row");
+      });
+    } else if (pointer.type === "single") {
+      const el = boardEl.querySelector(`.piece[data-id="${hit.id}"]`);
+      if (el) el.classList.add("target-single");
+    }
+    return;
+  }
+
+  const piece = findPieceById(pointer.id);
+  if (!piece) return;
+  const dx = event.clientX - pointer.startX;
+  const dy = event.clientY - pointer.startY;
+  let targetCol = Math.round(dx / step);
+  let targetRow = 0;
+
+  if (pointer.kind === "piece") {
+    targetRow = piece.row;
+    targetCol = pointer.startCol + targetCol;
+  } else {
+    targetRow = Math.round(dy / step);
+    targetRow = pointer.startRow + targetRow;
+    targetCol = pointer.startCol + targetCol;
+  }
+
+  targetRow = Math.max(0, Math.min(ROWS - 1, targetRow));
+  targetCol = Math.max(0, Math.min(COLS - piece.len, targetCol));
+  if (targetRow === piece.row && targetCol === piece.col) return;
+
+  if (pointer.kind === "piece") {
+    const direction = Math.sign(targetCol - piece.col);
+    let slideCol = piece.col;
+    while (
+      slideCol !== targetCol &&
+      canPlace(piece.row, slideCol + direction, piece.len, piece.id)
+    ) {
+      slideCol += direction;
+    }
+    if (slideCol === piece.col) return;
+    targetCol = slideCol;
+    targetRow = piece.row;
+  } else if (!canPlace(targetRow, targetCol, piece.len, piece.id)) {
+    return;
+  }
+
+  if (targetRow !== pointer.startRow || targetCol !== pointer.startCol) {
+    pointer.movedAny = true;
+  }
+  piece.row = targetRow;
+  piece.col = targetCol;
+  const el = boardEl.querySelector(`.piece[data-id="${piece.id}"]`);
+  if (el) positionPieceElement(el, piece.row, piece.col, piece.len);
+}
+
+function removeByColor(target) {
+  const removeSet = new Set();
+  state.pieces.forEach((piece) => {
+    if (piece.color === target.color) removeSet.add(piece.id);
+  });
+  return removeSet;
+}
+
+function removeByRow(target) {
+  const removeSet = new Set();
+  state.pieces.forEach((piece) => {
+    if (piece.row === target.row) removeSet.add(piece.id);
+  });
+  return removeSet;
+}
+
+function applyItemToPiece(type, target) {
+  let removeSet;
+  if (type === "same") removeSet = removeByColor(target);
+  else if (type === "row") removeSet = removeByRow(target);
+  else removeSet = new Set([target.id]);
+  removePieces(removeSet);
+}
+
+async function finishMovePointer() {
+  const drag = pointer;
+  pointer = null;
+  const piece = findPieceById(drag.id);
+  if (!piece) return;
+  boardEl.querySelectorAll(".piece.dragging").forEach((el) => el.classList.remove("dragging"));
+  const moved = piece.row !== drag.startRow || piece.col !== drag.startCol;
+  const acted = moved || drag.movedAny;
+
+  if (drag.kind === "piece-move") {
+    if (!acted) {
+      renderBoard();
+      return;
+    }
+    if (!useInventory("move")) {
+      renderBoard();
+      return;
+    }
+    busy = true;
+    try {
+      await settleAndClearStage();
+      if (state.over) return;
+      if (!state.pieces.length && spawnNextWave()) {
+        await settleAndClearStage();
+      }
+      checkTopRow();
+    } finally {
+      busy = false;
+      renderBoard();
+    }
+    return;
+  }
+
+  if (!acted) {
+    renderBoard();
+    return;
+  }
+
+  busy = true;
+  try {
+    await settleAndClearStage();
+    if (state.over) return;
+    if (!spawnNextWave()) return;
+    await settleAndClearStage();
+    if (state.over) return;
+
+    if (!state.pieces.length && spawnNextWave()) {
+      await settleAndClearStage();
+    }
+    if (state.round && state.round % 10 === 0) randomAutoReward();
+    checkTopRow();
+  } finally {
+    busy = false;
+    renderBoard();
+  }
+}
+
+async function finishItemPointer() {
+  const drag = pointer;
+  pointer = null;
+  removeGhost();
+  const hit = pieceFromPointer(drag.endX, drag.endY);
+  clearTargets();
+
+  if (!drag.moved || !hit || !state.pieces.some((p) => p.id === hit.id)) {
+    renderBoard();
+    return;
+  }
+  if (!useInventory(drag.type)) {
+    renderBoard();
+    return;
+  }
+
+  busy = true;
+  try {
+    applyItemToPiece(drag.type, hit);
+    renderBoard();
+    await settleAndClearStage();
+    if (state.over) return;
+    if (!state.pieces.length && spawnNextWave()) {
+      await settleAndClearStage();
+    }
+    checkTopRow();
+  } finally {
+    busy = false;
+    renderBoard();
+  }
+}
+
+function pointerUpHandler(event) {
+  if (!pointer) return;
+  event.preventDefault();
+
+  if (pointer.kind === "item") {
+    pointer.endX = event.clientX;
+    pointer.endY = event.clientY;
+    finishItemPointer();
+  } else {
+    finishMovePointer();
+  }
+}
+
+function bindEvents() {
+  window.addEventListener("pointerdown", pointerDownHandler, { passive: false });
+  window.addEventListener("pointermove", pointerMoveHandler, { passive: false });
+  window.addEventListener("pointerup", pointerUpHandler);
+  window.addEventListener("pointercancel", () => {
+    if (!pointer) return;
+    pointer = null;
+    clearTargets();
+    removeGhost();
+    renderBoard();
+  });
+
+  window.addEventListener("resize", requestLayout);
+
+  replayButton.addEventListener("click", resetGame);
+  endReplayButton.addEventListener("click", resetGame);
+}
+
+bindEvents();
+requestLayout();
+resetGame();
+
+  </script>
+</body>
+</html>
